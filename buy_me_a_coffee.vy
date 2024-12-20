@@ -14,11 +14,13 @@ interface AggregatoV3Interface:
 
 minimum_usd: uint256
 price_feed: AggregatoV3Interface #0x694AA1769357215DE4FAC081bf1f309aDC325306 -> Sepolia
+owner: public(address)
 
 @deploy
 def __init__(price_feed: address):
     self.minimum_usd = as_wei_value(5, "ether")
     self.price_feed = AggregatoV3Interface(price_feed)
+    self.owner = msg.sender
 
 @external
 @payable
@@ -34,7 +36,10 @@ def fund():
 
 @external
 def withdraw():
-    pass
+    """Take the money out of the contract
+    """
+    assert msg.sender == self.owner, "Not the contract owner!"
+    send(self.owner, self.balance) #Send the all money of the contract for the owner
 
 
 @internal
@@ -48,6 +53,10 @@ def _get_eth_to_usd_rate(eth_amount: uint256) -> uint256:
     return eth_amount_in_usd
 
 
+
+@external
+def get_eth_to_usd_rate(eth_amount: uint256) -> uint256:
+    return self._get_eth_to_usd_rate(eth_amount)
 
 
 #@external
