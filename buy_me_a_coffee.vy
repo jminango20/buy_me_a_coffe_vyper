@@ -1,10 +1,13 @@
-# Get funds from users
-# Withdraw funds
-# Set a minimum funding value in USD
-
 # pragma version 0.4.0
-# @ license: MIT
-# @ author: Juan
+"""
+@license MIT
+@title Buy Me A Coffee!
+@author Juan
+@notice This contract is for creating a sample funding contract where
+    1. Get funds from users
+    2. Withdraw funds
+    3. Set a minimum funding value in USD
+"""
 
 interface AggregatoV3Interface:
     def decimals() -> uint8: view
@@ -12,9 +15,14 @@ interface AggregatoV3Interface:
     def version() -> uint256: view
     def latestAnswer() -> int256: view
 
-minimum_usd: uint256
-price_feed: AggregatoV3Interface #0x694AA1769357215DE4FAC081bf1f309aDC325306 -> Sepolia
+minimum_usd: public(uint256)
+price_feed: public(AggregatoV3Interface) #0x694AA1769357215DE4FAC081bf1f309aDC325306 -> Sepolia
 owner: public(address)
+funders: public(DynArray[address, 1000])
+funder_to_amount_funded: public(HashMap[address, uint256])
+
+# Kepp track of who sent us
+# Hom much they send us
 
 @deploy
 def __init__(price_feed: address):
@@ -32,6 +40,8 @@ def fund():
     """
     usd_value_of_eth: uint256 = self._get_eth_to_usd_rate(msg.value)
     assert usd_value_of_eth >= self.minimum_usd, "You must spend more ETH!"
+    self.funders.append(msg.sender)
+    self.funder_to_amount_funded[msg.sender] += msg.value
 
 
 @external
@@ -40,6 +50,11 @@ def withdraw():
     """
     assert msg.sender == self.owner, "Not the contract owner!"
     send(self.owner, self.balance) #Send the all money of the contract for the owner
+    # resetting
+    for funder: address in self.funders:
+        self.funder_to_amount_funded[funder] = 0
+
+    self.funders = []
 
 
 @internal
